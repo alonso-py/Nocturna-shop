@@ -1,18 +1,33 @@
 from flask import Flask, render_template, request, redirect, session, url_for, flash
 import os
+from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from flask_bcrypt import Bcrypt
-from database import get_connection, DB_PATH, init_db
+from database import get_connection, init_db
 import sqlite3
 from datetime import datetime
 import stripe
 
-
-stripe.api_key = "sk_test_51TKuqdII32LJtmfPoeClwOZhgGyGt6YnQbbr9LPEVGzb42i8yWWxfid5iAcfqlTr9pQvIU73b13fOiLIrigHVqYe00Wff1pq6U" 
+# ==================== CONFIGURACIÓN DE ENTORNO ====================
+load_dotenv()   # ← Esto debe ir ANTES de leer las variables
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET', 'clave_super_secreta')
+
+# Clave secreta de Flask
+app.secret_key = os.getenv('FLASK_SECRET')
+if not app.secret_key:
+    raise RuntimeError("¡Falta FLASK_SECRET en el archivo .env!")
+
+# Clave de Stripe
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+if not stripe.api_key:
+    raise RuntimeError("¡Falta STRIPE_SECRET_KEY en el archivo .env!")
+
 bcrypt = Bcrypt(app)
+
+# ==================== INICIALIZACIÓN ====================
+with app.app_context():
+    init_db()
 
 # Ensure DB and tables exist
 with app.app_context():
@@ -273,51 +288,59 @@ def delete_product(product_id):
 @app.route('/add_to_cart/<int:product_id>')
 def add_to_cart(product_id):
     if 'user_id' not in session or session.get('role') != 'buyer':
+        flash("Debes iniciar sesión como comprador", "warning")
         return redirect(url_for('login', next=request.url))
 
     conn = get_connection()
     cur = conn.cursor()
 
-    # 🔥 1. Obtener stock actual
-    cur.execute("SELECT stock FROM products WHERE id=?", (product_id,))
+    # 1. Obtener el stock actual del producto
+    cur.execute("SELECT stock, name FROM products WHERE id = ?", (product_id,))
     product = cur.fetchone()
 
     if not product:
-        flash("Producto no existe")
+        flash("Producto no encontrado", "danger")
+        conn.close()
         return redirect(url_for('buyer_products'))
 
-    stock = int(product[0])  # 🔥 IMPORTANTE
+    stock_disponible = int(product[0])
+    nombre_producto = product[1]
 
-    # 🔥 2. Ver si ya está en carrito
-    cur.execute("SELECT quantity FROM cart WHERE user_id=? AND product_id=?", (session['user_id'], product_id))
-    r = cur.fetchone()
+    # 2. Ver cuántos tiene ya el usuario en el carrito
+    cur.execute("""
+        SELECT quantity FROM cart 
+        WHERE user_id = ? AND product_id = ?
+    """, (session['user_id'], product_id))
+    
+    row = cur.fetchone()
+    cantidad_actual = int(row[0]) if row else 0
 
-    if r:
-        current_q = int(r[0])
-        new_q = current_q + 1
+    nueva_cantidad = cantidad_actual + 1
 
-        if new_q > stock:
-            flash(f"Solo hay {stock} disponibles")
-            return redirect(url_for('cart'))
+    # 3. Validar si hay suficiente stock
+    if nueva_cantidad > stock_disponible:
+        flash(f"Solo hay {stock_disponible} unidades disponibles de '{nombre_producto}'", "warning")
+        conn.close()
+        return redirect(url_for('cart'))
 
+    # 4. Actualizar o insertar en el carrito
+    if row:  # Ya existe en el carrito
         cur.execute("""
             UPDATE cart 
-            SET quantity=? 
-            WHERE user_id=? AND product_id=?
-        """, (new_q, session['user_id'], product_id))
-    else:
-        # 🔥 4. Validar antes de insertar
-        if stock < 1:
-            flash("Producto agotado")
-            return redirect(url_for('buyer_products'))
-
-        cur.execute("INSERT INTO cart (user_id, product_id, quantity) VALUES (?,?,?)", 
-                    (session['user_id'], product_id, 1))
+            SET quantity = ? 
+            WHERE user_id = ? AND product_id = ?
+        """, (nueva_cantidad, session['user_id'], product_id))
+    else:  # Es la primera vez que lo agrega
+        cur.execute("""
+            INSERT INTO cart (user_id, product_id, quantity)
+            VALUES (?, ?, 1)
+        """, (session['user_id'], product_id))
 
     conn.commit()
     cur.close()
     conn.close()
 
+    flash(f"'{nombre_producto}' agregado al carrito", "success")
     return redirect(url_for('cart'))
 
 @app.route('/cart')
