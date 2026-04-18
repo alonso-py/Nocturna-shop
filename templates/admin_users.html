@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Usuarios | Admin{% endblock %}
+
+{% block content %}
+
+<div class="admin-container">
+
+    <div class="admin-header">
+        <h2>Gestión de Usuarios</h2>
+        <a href="/admin" class="btn-secondary">⬅ Volver al panel</a>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for u in users %}
+                <tr>
+                    <td>{{ u[0] }}</td>
+                    <td>{{ u[1] }}</td>
+                    <td>{{ u[2] }}</td>
+                    <td>
+                        <span class="role-badge {{ u[3] }}">
+                            {{ u[3] }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <a href="/admin/edit_user/{{ u[0] }}" class="btn-edit">✏ Editar</a>
+                        <a href="/admin/delete_user/{{ u[0] }}"
+                           class="btn-delete"
+                           onclick="return confirm('¿Eliminar usuario?')">
+                           🗑 Eliminar
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

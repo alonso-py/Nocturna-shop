@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Confirmar compra | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<div class="checkout-container">
+
+    <!-- IZQUIERDA -->
+    <div class="checkout-main">
+
+        <h2>📦 Confirmar compra</h2>
+
+        <!-- 🔥 DIRECCIÓN (solo visual por ahora) -->
+        <div class="checkout-box">
+            <h3>Dirección de envío</h3>
+            <textarea name="address"
+                    placeholder="Ingresa tu dirección completa"></textarea>
+            <small>(Se habilitará en siguiente versión)</small>
+        </div>
+
+        <!-- 🔥 MÉTODO DE PAGO -->
+        <div class="checkout-box">
+            <h3>Método de pago</h3>
+
+            <!-- ✅ BOTÓN STRIPE -->
+            <a href="/create-checkout-session" class="btn-primary">
+                💳 Pagar con tarjeta
+            </a>
+
+            <!-- OPCIONAL -->
+            <p style="margin-top:10px; font-size:14px; color:gray;">
+                Serás redirigido a una plataforma segura (Stripe)
+            </p>
+        </div>
+
+    </div>
+
+    <!-- DERECHA -->
+    <div class="checkout-summary">
+
+        <h3>Resumen del pedido</h3>
+
+        <div class="summary-items">
+            {% for i in items %}
+            <div class="summary-row">
+                <span>{{ i[1] }} x {{ i[3] }}</span>
+                <strong>${{ i[2] * i[3] }}</strong>
+            </div>
+            {% endfor %}
+        </div>
+
+        <hr>
+
+        <div class="summary-total">
+            Total: <span>${{ total }}</span>
+        </div>
+
+        <p class="secure">
+            🔒 Pago 100% seguro
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}

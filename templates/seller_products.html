@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mis productos | Seller</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<div class="seller-header">
+    <div class="seller-title">📦 Mis Productos</div>
+    <div class="seller-actions">
+        <a href="/add_product">➕ Agregar</a>
+        <span>|</span>
+        <a href="/seller">⬅ Regresar </a>
+   
+    </div>
+</div>
+
+<div class="seller-container">
+    <h2>Hola {{ name }}</h2>
+
+    {% if products %}
+    <div class="seller-products">
+        {% for p in products %}
+        <div class="seller-card">
+
+            {% if p.image %}
+                <img src="/static/uploads/{{ p.image }}" alt="{{ p.name }}">
+            {% else %}
+                <img src="/static/no-image.jpg" alt="Sin imagen">
+            {% endif %}
+
+            <h3>{{ p.name }}</h3>
+            <p class="seller-price">${{ p.price }}</p>
+
+            <div class="seller-card-actions">
+                <a href="/edit_product/{{ p.id }}" class="btn-primary">✏ Editar</a>
+                <a href="/delete_product/{{ p.id }}" class="btn-danger"
+                   onclick="return confirm('¿Eliminar producto?')">
+                    🗑 Eliminar
+                </a>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="seller-empty">
+        <h3>No tienes productos aún 😢</h3>
+        <br>
+        <a href="/add_product" class="btn-primary">➕ Agregar tu primer producto</a>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

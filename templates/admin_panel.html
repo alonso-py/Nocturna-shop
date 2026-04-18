@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Panel Administrador{% endblock %}
+
+{% block content %}
+<h1>🛠 Bienvenido, {{ name }} (Administrador)</h1>
+
+<div class="admin-menu">
+
+    <a class="admin-btn" href="/admin/users">
+        👤 Gestionar Usuarios
+    </a>
+
+    <a class="admin-btn" href="/admin/products">
+        📦 Gestionar Productos
+    </a>
+
+    <a class="admin-btn" href="/admin/add_product">
+        ➕ Agregar Producto
+    </a>
+
+    <a class="admin-btn danger" href="/logout">
+        🚪 Cerrar sesión
+    </a>
+
+</div>
+{% endblock %}

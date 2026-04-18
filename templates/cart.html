@@ -1,0 +1,80 @@
+
+
+{% extends "base.html" %}
+{% set hide_search = false %}
+{% block title %}Tu carrito | MiniAmazon{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div style="background:#ffdddd; padding:10px; margin:10px 0;">
+      {% for msg in messages %}
+        <p>{{ msg }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<h2 class="section-title">🛒 Tu carrito</h2>
+
+{% if items %}
+
+<div class="cart-container">
+
+    <div class="cart-items">
+
+        {% for i in items %}
+        <div class="cart-item">
+
+            <div class="cart-info">
+                <strong>{{ i[1] }}</strong><br>
+                Precio: ${{ i[2] }}<br>
+                Cantidad: {{ i[3] }}
+            </div>
+
+            <div class="cart-price">
+                Subtotal<br>
+                <span>${{ i[2] * i[3] }}</span>
+            </div>
+
+            <div class="cart-actions">
+                <a href="/remove_from_cart/{{ i[0] }}" class="btn-danger">
+                    Quitar
+                </a>
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="cart-summary">
+        <h3>Total</h3>
+        <p class="cart-total">${{ total }}</p>
+
+        <a href="/checkout" class="btn-primary">💳 Comprar</a>
+        <a href="{{ url_for('buyer_products') }}" class="btn-outline">
+            ⬅ Seguir comprando
+        </a>
+    </div>
+
+</div>
+
+{% else %}
+
+<div class="empty-cart">
+    <div class="empty-box">
+        <div class="empty-icon">🛒</div>
+        <h3>Tu carrito está vacío 😢</h3>
+        <p>Aún no has agregado productos</p>
+
+        <a href="{{ url_for('buyer_products') }}" class="btn-primary small-btn">
+            Ver productos
+        </a>
+    </div>
+</div>
+
+{% endif %}
+
+
+{% endblock %}

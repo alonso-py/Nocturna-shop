@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+    <a href="{{ url_for('buyer_products') }}">Inicio</a> ›
+    <span>{{ product.name }}</span>
+</div>
+
+
+<div class="product-page">
+
+    <!-- IMAGEN -->
+    <div class="product-image">
+        {% if product.image %}
+            <img src="/static/uploads/{{ product.image }}">
+        {% else %}
+            <div class="no-image">Sin imagen</div>
+        {% endif %}
+    </div>
+
+    <!-- INFO -->
+    <div class="product-info">
+        <h1 class="product-title">{{ product.name }}</h1>
+<div class="rating">
+    ⭐⭐⭐⭐☆ <span>(128 calificaciones)</span>
+</div>
+
+<p class="stock">Disponible</p>
+
+        <p class="price">$ {{ product.price }}</p>
+
+        <p class="product-desc">
+            {{ product.description }}
+        </p>
+    </div>
+
+    <!-- CAJA DE COMPRA -->
+    <div class="buy-box">
+        <p class="price-buy">$ {{ product.price }}</p>
+
+        {% if session.get('user_id') %}
+        <a href="/add_to_cart/{{ product.id }}" class="btn-buy">
+        🛒 Agregar al carrito
+        </a>
+        {% else %}
+        <a href="{{ url_for('login', next=request.url) }}" class="btn-buy">
+        🔒 Inicia sesión para comprar
+        </a>
+        {% endif %}
+<p class="delivery">
+    📦 Llega entre <strong>mañana</strong> y <strong>3 días hábiles</strong>
+</p>
+
+        <p class="secure">🔒 Compra segura</p>
+    </div>
+
+</div>
+
+<h2 class="related-title">Productos relacionados</h2>
+
+<div class="related-products">
+    {% for r in related_products %}
+    <div class="related-card">
+        <img src="/static/uploads/{{ r.image or 'no-image.jpg' }}">
+        <p>{{ r.name }}</p>
+        <span>${{ r.price }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+

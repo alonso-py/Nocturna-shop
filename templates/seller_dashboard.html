@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | Seller</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<div class="seller-header">
+    <div class="seller-title">📊 Dashboard del Vendedor</div>
+    <a href="/seller" class="back-link">⬅ Regresar</a>
+</div>
+
+<div class="dashboard-container">
+
+    <!-- CARDS -->
+    <div class="dashboard-cards">
+
+        <div class="dash-card">
+            <span class="dash-label">Total ganado</span>
+            <span class="dash-value money">${{ total_ganado }}</span>
+        </div>
+
+        <div class="dash-card">
+            <span class="dash-label">Productos</span>
+            <span class="dash-value">{{ total_productos }}</span>
+        </div>
+
+        <div class="dash-card">
+            <span class="dash-label">Ventas</span>
+            <span class="dash-value">{{ total_ventas }}</span>
+        </div>
+
+    </div>
+
+    <!-- TABLA -->
+    <h2 class="section-title">🕒 Últimas ventas</h2>
+
+    {% if ultimas %}
+    <div class="table-wrapper">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in ultimas %}
+                <tr>
+                    <td>{{ v[0] }}</td>
+                    <td>{{ v[1] }}</td>
+                    <td>{{ v[2] }}</td>
+                    <td>${{ v[3] }}</td>
+                    <td class="subtotal">${{ v[2] * v[3] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>Aún no hay ventas</h3>
+            <p>Cuando vendas, aquí verás el resumen.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>

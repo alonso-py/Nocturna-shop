@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Agregar dirección | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<h2>➕ Nueva dirección</h2>
+
+<form method="POST" class="form-container">
+
+    <input type="text" name="full_name" placeholder="Nombre completo" required>
+
+    <input type="text" name="street" placeholder="Calle y número" required>
+
+    <input type="text" name="city" placeholder="Ciudad" required>
+
+    <input type="text" name="state" placeholder="Estado" required>
+
+    <input type="text" name="postal_code" placeholder="Código postal" required>
+
+    <input type="text" name="phone" placeholder="Teléfono (opcional)">
+
+    <button class="btn-primary">Guardar dirección</button>
+
+</form>
+
+{% endblock %}

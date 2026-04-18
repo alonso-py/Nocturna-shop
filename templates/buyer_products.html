@@ -1,0 +1,91 @@
+
+{% extends "base.html" %}
+{% block title %}Productos | Mini Amazon{% endblock %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+    <div style="background:#ffdddd; padding:10px; margin:10px 0;">
+      {% for msg in messages %}
+        <p>{{ msg }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<div class="swiper mySwiper">
+    <div class="swiper-wrapper">
+
+        <div class="swiper-slide banner banner1">
+            <div class="banner-content">
+                <h2>🔥 Ofertas increíbles</h2>
+                <p>Hasta 50% de descuento</p>
+            </div>
+        </div>
+
+        <div class="swiper-slide banner banner2">
+            <div class="banner-content">
+                <h2>💻 Tecnología</h2>
+                <p>Lo último en gadgets</p>
+            </div>
+        </div>
+
+        <div class="swiper-slide banner banner3">
+            <div class="banner-content">
+                <h2>🎧 Accesorios</h2>
+                <p>Calidad premium</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<div class="offers">
+    {% for c in categories %}
+        <a href="{{ url_for('buyer_products') }}?category={{ c[0] }}"
+           class="offer-card {% if selected_category == c[0]|string %}active{% endif %}">
+            {{ c[1] }}
+        </a>
+    {% endfor %}
+</div>
+
+
+
+<div class="products">
+    {% for p in products %}
+    <div class="card">
+        {% if p.image %}
+            <img src="/static/uploads/{{ p.image }}" alt="">
+        {% else %}
+            <img src="/static/no-image.jpg" alt="">
+        {% endif %}
+
+        <h3>{{ p.name }}</h3>
+        <p class="price">${{ p.price }}</p>
+
+        <div class="card-actions">
+            <a href="/buyer/product/{{ p.id }}" class="btn-outline">Ver más</a>
+            <a href="/add_to_cart/{{ p.id }}" class="btn-primary">🛒 Agregar</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const swiper = new Swiper(".mySwiper", {
+        loop: true,
+        autoplay: {
+            delay: 3000,
+            disableOnInteraction: false,
+        },
+    });
+});
+</script>
+{% endblock %}

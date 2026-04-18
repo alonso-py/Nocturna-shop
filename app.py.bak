@@ -1,0 +1,286 @@
+from flask import Flask, render_template, request, redirect, session
+import sqlite3
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt()
+
+app = Flask(__name__)
+app.secret_key = "clave_super_secreta"
+bcrypt.init_app(app)
+
+def get_db():
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        password = request.form["password"]
+        role = request.form["role"]
+
+        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+                       (name, email, hashed_password, role))
+        conn.commit()
+        conn.close()
+
+        return redirect("/")
+
+    return render_template("register.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+
+
+        if user is not None and bcrypt.check_password_hash(user["password"], password):
+            session["user_id"] = user["id"]
+            session["role"] = user["role"]
+            session["name"] = user["name"]
+
+            if user["role"] == "admin":
+                return redirect("/admin")
+            elif user["role"] == "seller":
+                return redirect("/seller")
+            elif user["role"] == "buyer":
+                return redirect("/buyer")
+
+        return "Correo o contraseña incorrecta"
+
+
+    return render_template("login.html")
+
+@app.route("/dashboard")
+def dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
+    return f"""
+        Bienvenido {session['name']}! <br>
+        Tu rol es: {session['role']} <br><br>
+
+        <a href='/add_product'>Agregar un producto</a> <br>
+        <a href='/products'>Ver catálogo</a>
+        """
+
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+
+@app.route("/add_product", methods=["GET", "POST"])
+def add_product():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if request.method == "POST":
+        name = request.form["name"]
+        price = request.form["price"]
+        description = request.form["description"]
+        user_id = session["user_id"]
+
+        # --- Guardar imagen ---
+        image_file = request.files["image"]
+        filename = secure_filename(image_file.filename)
+        image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        image_file.save(image_path)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO products (name, price, description, user_id, image) VALUES (?, ?, ?, ?, ?)",
+            (name, price, description, user_id, filename)
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect("/dashboard")
+
+    return render_template("add_product.html")
+
+@app.route("/edit_product/<int:id>", methods=["GET", "POST"])
+def edit_product(id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Obtener producto
+    cursor.execute("SELECT * FROM products WHERE id = ?", (id,))
+    product = cursor.fetchone()
+
+    if not product:
+        conn.close()
+        return "Producto no encontrado"
+
+    if request.method == "POST":
+        name = request.form["name"]
+        price = request.form["price"]
+        description = request.form["description"]
+
+        # Si subieron imagen nueva
+        image_file = request.files["image"]
+        filename = product["image"]
+
+        if image_file and image_file.filename != "":
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            image_file.save(image_path)
+
+        # Actualizar en BD
+        cursor.execute("""
+            UPDATE products 
+            SET name = ?, price = ?, description = ?, image = ?
+            WHERE id = ?
+        """, (name, price, description, filename, id))
+
+        conn.commit()
+        conn.close()
+
+        return redirect("/products")
+
+    conn.close()
+    return render_template("edit_product.html", product=product)
+
+@app.route("/delete_product/<int:product_id>")
+def delete_product(product_id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Primero obtenemos la info del producto
+    cursor.execute("SELECT image FROM products WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+
+    # Si el producto tiene imagen, la borramos del folder
+    if product and product["image"]:
+        import os
+        path = f"static/uploads/{product['image']}"
+        if os.path.exists(path):
+            os.remove(path)
+
+    # Luego eliminamos el producto de la BD
+    cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/products")
+
+@app.route("/products")
+def products():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
+    conn.close()
+
+    return render_template("products.html", products=products)
+
+@app.route("/product/<int:product_id>")
+def product_detail(product_id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+
+    if not product:
+        return "Producto no encontrado"
+
+    return render_template("product_detail.html", product=product)
+
+
+@app.route("/admin")
+def admin_panel():
+    if "user_id" not in session or session["role"] != "admin":
+        return redirect("/login")
+    return render_template("admin_panel.html", name=session["name"])
+
+
+@app.route("/seller")
+def seller_panel():
+    if "user_id" not in session or session["role"] != "seller":
+        return redirect("/login")
+    return render_template("seller_panel.html", name=session["name"])
+
+
+@app.route("/buyer")
+def buyer_panel():
+    if "user_id" not in session or session["role"] != "buyer":
+        return redirect("/login")
+    return render_template("buyer_panel.html", name=session["name"])
+
+
+@app.route ("/")
+def home():
+    return render_template("home.html")
+
+
+def create_database():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+
+    # Tabla de usuarios
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL
+    )
+    """)
+
+    # Tabla de productos 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        price REAL NOT NULL,
+        description TEXT NOT NULL,
+        user_id INTEGER,
+        image TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+# Ejecutar creación de tablas
+create_database()
+
+if __name__ == "__main__":
+    # Crear base al iniciar
+    create_database()
+    print("Base creada correctamente")
+    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run (debug= True) 

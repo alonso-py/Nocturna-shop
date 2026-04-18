@@ -1,0 +1,230 @@
+from flask import Flask, render_template, request, redirect, session, url_for
+import os
+from werkzeug.utils import secure_filename
+from flask_bcrypt import Bcrypt
+from database import get_connection, DB_PATH
+import sqlite3
+
+app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET', 'clave_super_secreta')
+bcrypt = Bcrypt(app)
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def create_database():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        price REAL NOT NULL,
+        description TEXT,
+        user_id INTEGER,
+        image TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+@app.before_first_request
+def init_app():
+    # ensure DB exists and tables created
+    create_database()
+
+@app.route('/register', methods=['GET','POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+        hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute('INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)', (name,email,hashed,role))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET','POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute('SELECT * FROM users WHERE email = ?', (email,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        if user and bcrypt.check_password_hash(user[3], password):
+            # user is a tuple: (id,name,email,password,role) because sqlite3 default row factory
+            session['user_id'] = user[0]
+            session['name'] = user[1]
+            session['role'] = user[4]
+            if session['role'] == 'admin':
+                return redirect(url_for('admin_panel'))
+            elif session['role'] == 'seller':
+                return redirect(url_for('seller_panel'))
+            elif session['role'] == 'buyer':
+                return redirect(url_for('buyer_panel'))
+            else:
+                error = 'Rol no válido'
+        else:
+            error = 'Correo o contraseña incorrecta'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('dashboard.html', name=session.get('name'), role=session.get('role'))
+
+@app.route('/add_product', methods=['GET','POST'])
+def add_product():
+    if 'user_id' not in session or session.get('role') != 'seller':
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        name = request.form['name']
+        price = request.form['price']
+        description = request.form.get('description','')
+        user_id = session['user_id']
+        image_file = request.files.get('image')
+        filename = None
+        if image_file and image_file.filename:
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute('INSERT INTO products (name,price,description,user_id,image) VALUES (?,?,?,?,?)', (name,price,description,user_id,filename))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return redirect(url_for('seller_panel'))
+    return render_template('add_product.html')
+
+@app.route('/products')
+def products():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products')
+    products = cur.fetchall()
+    cur.close()
+    conn.close()
+    # map rows to dict-like for templates
+    products_mapped = []
+    for p in products:
+        products_mapped.append({
+            'id': p[0], 'name': p[1], 'price': p[2], 'description': p[3], 'user_id': p[4], 'image': p[5]
+        })
+    return render_template('products.html', products=products_mapped)
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    p = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not p:
+        return 'Producto no encontrado', 404
+    product = {'id': p[0], 'name': p[1], 'price': p[2], 'description': p[3], 'user_id': p[4], 'image': p[5]}
+    return render_template('product_detail.html', product=product)
+
+@app.route('/edit_product/<int:product_id>', methods=['GET','POST'])
+def edit_product(product_id):
+    if 'user_id' not in session or session.get('role') != 'seller':
+        return redirect(url_for('login'))
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    p = cur.fetchone()
+    if not p:
+        cur.close(); conn.close()
+        return 'Producto no encontrado', 404
+    if request.method == 'POST':
+        name = request.form['name']; price = request.form['price']; description = request.form.get('description','')
+        image_file = request.files.get('image')
+        filename = p[5]
+        if image_file and image_file.filename:
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+        cur.execute('UPDATE products SET name=?, price=?, description=?, image=? WHERE id=?', (name, price, description, filename, product_id))
+        conn.commit()
+        cur.close(); conn.close()
+        return redirect(url_for('seller_panel'))
+    product = {'id': p[0], 'name': p[1], 'price': p[2], 'description': p[3], 'user_id': p[4], 'image': p[5]}
+    cur.close(); conn.close()
+    return render_template('edit_product.html', product=product)
+
+@app.route('/delete_product/<int:product_id>')
+def delete_product(product_id):
+    if 'user_id' not in session or session.get('role') != 'seller':
+        return redirect(url_for('login'))
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute('SELECT image FROM products WHERE id = ?', (product_id,))
+    p = cur.fetchone()
+    if p and p[0]:
+        path = os.path.join(app.config['UPLOAD_FOLDER'], p[0])
+        if os.path.exists(path): os.remove(path)
+    cur.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    conn.commit(); cur.close(); conn.close()
+    return redirect(url_for('seller_panel'))
+
+@app.route('/admin')
+def admin_panel():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return redirect(url_for('login'))
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute('SELECT id,name,email,role FROM users')
+    users = cur.fetchall(); cur.close(); conn.close()
+    users_mapped = [{'id':u[0],'name':u[1],'email':u[2],'role':u[3]} for u in users]
+    return render_template('admin_panel.html', name=session.get('name'), users=users_mapped)
+
+@app.route('/seller')
+def seller_panel():
+    if 'user_id' not in session or session.get('role') != 'seller':
+        return redirect(url_for('login'))
+    conn = get_connection(); cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE user_id = ?', (session['user_id'],))
+    prods = cur.fetchall(); cur.close(); conn.close()
+    prods_mapped = [{'id':p[0],'name':p[1],'price':p[2],'description':p[3],'user_id':p[4],'image':p[5]} for p in prods]
+    return render_template('seller_panel.html', name=session.get('name'), products=prods_mapped)
+
+@app.route('/buyer')
+def buyer_panel():
+    if 'user_id' not in session or session.get('role') != 'buyer':
+        return redirect(url_for('login'))
+    return render_template('buyer_panel.html', name=session.get('name'))
+
+if __name__ == '__main__':
+    app.run(debug=True)

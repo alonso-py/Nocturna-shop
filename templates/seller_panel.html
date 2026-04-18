@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Panel del vendedor{% endblock %}
+
+{% block content %}
+
+<h1>Panel del vendedor</h1>
+
+<div class="seller-dashboard">
+
+    <a href="/seller/products" class="dashboard-card">
+        📦
+        <span>Mis productos</span>
+    </a>
+
+    <a href="/add_product" class="dashboard-card">
+        ➕
+        <span>Agregar producto</span>
+    </a>
+
+    <a href="/seller/orders" class="dashboard-card">
+        🧾
+        <span>Pedidos recibidos</span>
+    </a>
+
+     <a href="/seller/dashboard" class="dashboard-card">
+        📊
+        <span>Dashboard</span>
+    </a>
+    <a href="/logout" class="dashboard-card danger">
+        🚪
+        <span>Cerrar sesión</span>
+    </a>
+
+</div>
+
+{% endblock %}

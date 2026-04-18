@@ -1,0 +1,28 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+ENV/
+
+# Archivos de entorno (¡importante!)
+.env
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de datos (solo si no quieres subirla)
+database.db
+*.db
+
+# Archivos de logs
+*.log
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# Carpetas de editores
+.vscode/
+.idea/

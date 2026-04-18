@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Registro | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h2>Crear cuenta</h2>
+
+    <form method="post">
+
+        <label>Nombre</label>
+        <input type="text" name="name" required>
+
+        <label>Correo</label>
+        <input type="email" name="email" required>
+
+        <label>Contraseña</label>
+        <input type="password" name="password" required>
+
+        <label>Rol</label>
+        <select name="role">
+            <option value="buyer">Comprador</option>
+            <option value="seller">Vendedor</option>
+        </select>
+
+        <button type="submit">Registrarse</button>
+
+    </form>
+
+    <p style="text-align:center; margin-top:15px;">
+        ¿Ya tienes cuenta?
+        <a href="/login">Inicia sesión</a>
+    </p>
+</div>
+
+{% endblock %}

@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+    <title>{% block title %}MiniAmazon{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<header class="amazon-header">
+
+    <div class="logo">
+        mini<span>Amazon</span>
+    </div>
+
+{% if session.get('role') == 'buyer' and not hide_search %}
+<form method="GET" action="/buyer/products" class="header-search">
+    <input type="text" name="q" placeholder="Buscar en miniAmazon">
+</form>
+
+
+
+
+    {% endif %}
+
+    <nav class="header-actions">
+
+        <a href="{{ url_for('buyer_products') }}">Inicio</a>
+
+
+        {% if session.get('user_id') %}
+
+            {% if session.get('role') == 'seller' %}
+                <a href="/seller">Panel vendedor</a>
+                
+
+            {% elif session.get('role') == 'buyer' %}
+                <a href="/my_orders">📦 Mis pedidos</a>
+                <a href="/cart">🛒 Carrito</a>
+            {% endif %}
+
+            <a href="/logout">Cerrar sesión</a>
+
+        {% else %}
+            <a href="/login">Iniciar sesión</a>
+            <a href="/register">Registrarse</a>
+        {% endif %}
+
+    </nav>
+
+</header>
+
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="amazon-footer">
+    © 2025 MiniAmazon
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+</body>
+</html>

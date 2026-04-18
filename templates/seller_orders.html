@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mis Ventas | Seller</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<div class="seller-header">
+    <div class="seller-title">📦 Mis Ventas</div>
+    <a href="/seller" class="back-link">⬅ Regresar</a>
+</div>
+
+<div class="orders-container">
+
+    <div class="orders-summary">
+        <h2>Total ganado</h2>
+        <span class="total-money">${{ total }}</span>
+    </div>
+
+    {% if sales %}
+    <div class="table-wrapper">
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sales %}
+                <tr>
+                    <td>#{{ s[0] }}</td>
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[3] }}</td>
+                    <td>{{ s[4] }}</td>
+                    <td>${{ s[5] }}</td>
+                    <td class="subtotal">${{ s[6] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No tienes ventas todavía 😢</h3>
+            <p>Cuando un cliente compre, aquí aparecerán tus pedidos.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>

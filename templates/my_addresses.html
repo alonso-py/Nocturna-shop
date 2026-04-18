@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Mis direcciones | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<h2>📍 Mis direcciones</h2>
+
+<a href="/add_address" class="btn-primary">➕ Agregar dirección</a>
+
+<div class="address-list">
+
+{% for a in addresses %}
+    <div class="address-card">
+        <strong>{{ a[2] }}</strong>
+        <p>
+            {{ a[3] }}, {{ a[4] }}<br>
+            {{ a[5] }} - {{ a[6] }}
+        </p>
+        <span>📞 {{ a[7] }}</span>
+    </div>
+{% else %}
+    <p>No tienes direcciones registradas</p>
+{% endfor %}
+
+</div>
+
+{% endblock %}

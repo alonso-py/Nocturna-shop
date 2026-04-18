@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set hide_search = true %}
+{% block title %}Pedido #{{ order.id }} | MiniAmazon{% endblock %}
+
+{% block content %}
+
+<h2 class="section-title">📦 Pedido #{{ order.id }}</h2>
+
+<div class="order-detail-card">
+
+    <div class="order-info">
+        <div>
+            <strong>Fecha</strong><br>
+            {{ order.created_at }}
+        </div>
+
+        <div>
+            <strong>Dirección</strong><br>
+            {{ order.address }}
+        </div>
+
+        <div>
+            <strong>Método de pago</strong><br>
+            {{ order.payment_method }}
+        </div>
+
+        <div>
+            <strong>Total</strong><br>
+            ${{ order.total }}
+        </div>
+    </div>
+
+    <!-- ESTADO DEL PEDIDO -->
+    <div class="order-status">
+        <div class="step {% if order.status in ['Procesando','En camino','Entregado'] %}active{% endif %}">
+            🕒 Procesando
+        </div>
+        <div class="step {% if order.status in ['En camino','Entregado'] %}active{% endif %}">
+            🚚 En camino
+        </div>
+        <div class="step {% if order.status == 'Entregado' %}active{% endif %}">
+            📦 Entregado
+        </div>
+    </div>
+
+</div>
+
+<h3 class="section-title">🛍 Productos</h3>
+
+<div class="order-products">
+
+    {% for item in items %}
+    <div class="product-row">
+        <div>
+            <strong>{{ item.name }}</strong><br>
+            Cantidad: {{ item.quantity }}
+        </div>
+
+        <div>
+            ${{ item.price }}<br>
+            <span class="subtotal">
+                Subtotal: ${{ item.quantity * item.price }}
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<a href="{{ url_for('my_orders') }}" class="btn-outline">← Volver a mis pedidos</a>
+
+{% endblock %}

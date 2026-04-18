@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Productos | Admin{% endblock %}
+
+{% block content %}
+
+<div class="admin-container">
+
+    <div class="admin-header">
+        <h2>Gestión de Productos</h2>
+        <a href="/admin" class="btn-secondary">⬅ Volver al panel</a>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>Precio</th>
+                    <th>Stock</th> <!-- 🔥 NUEVO -->
+                    <th>Vendedor</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for p in products %}
+                <tr>
+                    <td>{{ p[0] }}</td>
+                    <td>{{ p[1] }}</td>
+                    <td class="price">${{ p[2] }}</td>
+                    <td>{{ p[3] }}</td> <!-- 🔥 STOCK -->
+                    <td>
+                        <span class="role-badge seller">
+                            {{ p[4] or 'Admin' }}
+                        </span>
+                    </td>
+                    <td class="actions">
+                        <a href="/admin/delete_product/{{ p[0] }}"
+                           class="btn-delete"
+                           onclick="return confirm('¿Eliminar producto?')">
+                           🗑 Eliminar
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

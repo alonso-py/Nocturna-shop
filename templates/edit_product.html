@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Producto | Seller</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<div class="seller-header">
+    <div class="seller-title">✏ Editar Producto</div>
+    <a href="/seller" class="back-link">⬅ Regresar</a>
+</div>
+
+<div class="form-container">
+
+    <h2>Editar información del producto</h2>
+
+    <form action="/edit_product/{{ product.id }}" method="POST"
+          enctype="multipart/form-data" class="product-form">
+
+        <div class="form-group">
+            <label>Nombre del producto</label>
+            <input type="text" name="name" value="{{ product.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Categoría</label>
+            <select name="category_id" required>
+                {% for c in categories %}
+                    <option value="{{ c[0] }}"
+                        {% if product.category_id == c[0] %}selected{% endif %}>
+                        {{ c[1] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Precio</label>
+            <input type="number" name="price" value="{{ product.price }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Stock disponible</label>
+            <input type="number" name="stock" value="{{ product.stock }}" min="0" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Descripción</label>
+            <textarea name="description" required>{{ product.description }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Imagen actual</label>
+            <div class="image-preview">
+                {% if product.image %}
+                    <img src="/static/uploads/{{ product.image }}">
+                {% else %}
+                    <span>Sin imagen</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Cambiar imagen (opcional)</label>
+            <input type="file" name="image">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Guardar cambios</button>
+            <a href="/seller" class="btn-secondary">Cancelar</a>
+        </div>
+
+    </form>
+
+</div>
+
+</body>
+</html>
