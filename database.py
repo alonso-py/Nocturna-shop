@@ -13,7 +13,7 @@ def get_connection(timeout=10, check_same_thread=False):
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
-
+    # usuarios
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +23,7 @@ def init_db():
         role TEXT NOT NULL
     )
     """)
-
+    # productos
     cur.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +35,7 @@ def init_db():
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
     """)
-
+    # carrito 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS cart (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
