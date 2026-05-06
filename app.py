@@ -10,7 +10,18 @@ import stripe
 
 # ==================== CONFIGURACIÓN DE ENTORNO ====================
 load_dotenv()   # ← Esto debe ir ANTES de leer las variables
-
+def login_required(role=None):
+    def decorator(f):
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return redirect(url_for('login'))
+            if role and session.get('role') != role:
+                flash("No tienes permiso para acceder a esta página", "danger")
+                return redirect(url_for('buyer_products'))
+            return f(*args, **kwargs)
+        decorated_function.__name__ = f.__name__
+        return decorated_function
+    return decorator
 app = Flask(__name__)
 
 # Clave secreta de Flask
@@ -209,7 +220,7 @@ def edit_product(product_id):
     conn = get_connection()
     cur = conn.cursor()
 
-    # Producto
+    # Obtener el producto actual
     cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
     p = cur.fetchone()
     if not p:
@@ -217,7 +228,7 @@ def edit_product(product_id):
         conn.close()
         return 'Producto no encontrado', 404
 
-    # Categorías
+    # Obtener categorías
     cur.execute('SELECT id, name FROM categories')
     categories = cur.fetchall()
 
@@ -229,30 +240,31 @@ def edit_product(product_id):
         category_id = request.form['category_id']
 
         image_file = request.files.get('image')
-        filename = p[5]
+        filename = p[5]  # imagen actual
 
         if image_file and image_file.filename:
             filename = secure_filename(image_file.filename)
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image_file.save(image_path)
 
-        cur.execute(
-            '''UPDATE products 
-               SET name=?, price=?, stock=?, description=?, image=?, category_id=?
-               WHERE id=?''',
-            (name, price, stock, description, filename, category_id, product_id)
-        )
+        cur.execute("""
+            UPDATE products 
+            SET name=?, price=?, stock=?, description=?, image=?, category_id=?
+            WHERE id=?
+        """, (name, price, stock, description, filename, category_id, product_id))
 
         conn.commit()
         cur.close()
         conn.close()
+        flash("Producto actualizado correctamente", "success")
         return redirect(url_for('seller_panel'))
 
+    # Preparar datos para el template
     product = {
         'id': p[0],
         'name': p[1],
         'price': p[2],
-        'stock' : p[3],
+        'stock': p[3],
         'description': p[4],
         'user_id': p[5],
         'image': p[6],
@@ -267,7 +279,6 @@ def edit_product(product_id):
         product=product,
         categories=categories
     )
-
 
 @app.route('/delete_product/<int:product_id>')
 def delete_product(product_id):
@@ -341,6 +352,54 @@ def add_to_cart(product_id):
     conn.close()
 
     flash(f"'{nombre_producto}' agregado al carrito", "success")
+    return redirect(url_for('cart'))
+
+@app.route('/cart/update/<int:cart_id>/<action>')
+def update_cart(cart_id, action):
+    if 'user_id' not in session or session.get('role') != 'buyer':
+        return redirect(url_for('login'))
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Obtener cantidad actual y product_id
+    cur.execute("SELECT quantity, product_id FROM cart WHERE id = ?", (cart_id,))
+    item = cur.fetchone()
+
+    if not item:
+        conn.close()
+        return redirect(url_for('cart'))
+
+    quantity = item[0]
+    product_id = item[1]
+
+    if action == 'plus':
+        # Verificar stock
+        cur.execute("SELECT stock FROM products WHERE id = ?", (product_id,))
+        stock = cur.fetchone()[0]
+        if quantity + 1 <= stock:
+            quantity += 1
+        else:
+            flash("No hay más stock disponible", "warning")
+            conn.close()
+            return redirect(url_for('cart'))
+
+    elif action == 'minus':
+        if quantity > 1:
+            quantity -= 1
+        else:
+            # Si llega a 0, eliminar el item
+            cur.execute("DELETE FROM cart WHERE id = ?", (cart_id,))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('cart'))
+
+    # Actualizar cantidad
+    cur.execute("UPDATE cart SET quantity = ? WHERE id = ?", (quantity, cart_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
     return redirect(url_for('cart'))
 
 @app.route('/cart')
@@ -449,25 +508,50 @@ def buyer_product_detail(product_id):
     conn = get_connection()
     cur = conn.cursor()
 
+    # Obtener el producto principal
     cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
-    r = cur.fetchone()
+    p = cur.fetchone()
+
+    if not p:
+        cur.close()
+        conn.close()
+        return 'Producto no encontrado', 404
+
+    product = {
+        'id': p[0],
+        'name': p[1],
+        'price': p[2],
+        'description': p[3],
+        'user_id': p[4],
+        'image': p[5],
+        'category_id': p[7] if len(p) > 7 else None
+    }
+
+    # Obtener productos relacionados (misma categoría, excluyendo el actual)
+    related = []
+    if product['category_id']:
+        cur.execute("""
+            SELECT id, name, price, image 
+            FROM products 
+            WHERE category_id = ? AND id != ? 
+            LIMIT 4
+        """, (product['category_id'], product_id))
+        related_rows = cur.fetchall()
+        related = [{
+            'id': r[0],
+            'name': r[1],
+            'price': r[2],
+            'image': r[3]
+        } for r in related_rows]
 
     cur.close()
     conn.close()
 
-    if not r:
-        return 'Producto no encontrado', 404
-
-    product = {
-        'id': r[0],
-        'name': r[1],
-        'price': r[2],
-        'description': r[3],
-        'user_id': r[4],
-        'image': r[5]
-    }
-
-    return render_template('buyer_product_detail.html', product=product)
+    return render_template(
+        'buyer_product_detail.html', 
+        product=product, 
+        related=related
+    )
 
 @app.route('/my_orders')
 def my_orders():
@@ -521,6 +605,7 @@ def order_detail(order_id):
 
 # ADMIN and seller panels
 @app.route('/admin')
+@login_required('admin')
 def admin_panel():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -532,12 +617,14 @@ def admin_panel():
 
 # PANEL ADMIN
 @app.route('/admin_dashboard')
+@login_required('admin')
 def admin_dashboard():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     return render_template('admin_dashboard.html')
 
 @app.route('/admin/users')
+@login_required('admin')
 def admin_users():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -552,6 +639,7 @@ def admin_users():
     return render_template('admin_users.html', users=users)
 
 @app.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@login_required('admin')
 def admin_edit_user(user_id):
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -580,6 +668,7 @@ def admin_edit_user(user_id):
     return render_template('admin_edit_user.html', user=user)
 
 @app.route('/admin/delete_user/<int:user_id>')
+@login_required('admin')
 def admin_delete_user(user_id):
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -598,6 +687,7 @@ def admin_delete_user(user_id):
 
 
 @app.route('/admin/products')
+@login_required('admin')
 def admin_products():
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -620,6 +710,7 @@ def admin_products():
 
 # AGREGAR PRODUCTO (admin)
 @app.route('/admin/add_product', methods=['GET', 'POST'])
+@login_required('admin')
 def admin_add_product():
 
     if session.get('role') != 'admin':
@@ -651,6 +742,7 @@ def admin_add_product():
     return render_template('admin_add_product.html')
 
 @app.route('/admin/delete_product/<int:product_id>')
+@login_required('admin')
 def admin_delete_product(product_id):
     if 'user_id' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -676,6 +768,7 @@ def admin_delete_product(product_id):
 
 
 @app.route('/seller')
+@login_required('seller')
 def seller_panel():
     if 'user_id' not in session or session.get('role') != 'seller':
         return redirect(url_for('login'))
@@ -706,6 +799,7 @@ def seller_panel():
     )
     
 @app.route('/seller/products')
+@login_required('seller')
 def seller_products():
     if 'user_id' not in session or session.get('role') != 'seller':
         return redirect(url_for('login'))
@@ -747,29 +841,46 @@ def checkout():
     conn = get_connection()
     cur = conn.cursor()
 
+    # Obtener items del carrito
     cur.execute("""
         SELECT products.id, products.name, products.price, cart.quantity
         FROM cart
         JOIN products ON cart.product_id = products.id
         WHERE cart.user_id=?
     """, (session['user_id'],))
-
     items = cur.fetchall()
     total = sum(i[2] * i[3] for i in items)
 
-    if request.method == 'POST':
-        address = request.form['address']
-        payment = request.form['payment']
+    # Obtener direcciones del usuario
+    cur.execute("""
+        SELECT id, full_name, street, city, state, postal_code, phone 
+        FROM addresses WHERE user_id = ?
+    """, (session['user_id'],))
+    addresses = cur.fetchall()
 
+    if request.method == 'POST':
+        payment = request.form['payment']
+        address_id = request.form.get('address_id')
+
+        # Obtener dirección seleccionada
+        if address_id:
+            cur.execute("SELECT * FROM addresses WHERE id = ? AND user_id = ?", (address_id, session['user_id']))
+            addr = cur.fetchone()
+            address_text = f"{addr[2]}, {addr[3]}, {addr[4]}, CP {addr[5]}" if addr else "Dirección no especificada"
+        else:
+            address_text = "Dirección no especificada"
+
+        # Crear orden
         cur.execute("""
-            INSERT INTO orders (user_id, total, address, payment_method, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO orders (user_id, total, address, payment_method, created_at, status)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             session['user_id'],
             total,
-            address,
+            address_text,
             payment,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'Pendiente de pago' if payment == 'transferencia' else 'Pagado'
         ))
 
         order_id = cur.lastrowid
@@ -779,45 +890,37 @@ def checkout():
             quantity = i[3]
             price = i[2]
 
-            # 🔥 1. Verificar stock actual
             cur.execute("SELECT stock FROM products WHERE id=?", (product_id,))
             result = cur.fetchone()
-
-            if not result:
-                flash("Producto no encontrado")
-                conn.rollback()
-                return redirect(url_for('cart'))
-
-            stock = int(result[0])
+            stock = int(result[0]) if result else 0
 
             if quantity > stock:
-                flash(f"No hay suficiente stock. Solo quedan {stock}")
+                flash(f"No hay suficiente stock", "danger")
                 conn.rollback()
                 return redirect(url_for('cart'))
 
-            # 🔥 2. Guardar en order_items
             cur.execute("""
                 INSERT INTO order_items (order_id, product_id, quantity, price)
                 VALUES (?, ?, ?, ?)
             """, (order_id, product_id, quantity, price))
 
-            # 🔥 3. DESCONTAR STOCK
-            cur.execute("""
-                UPDATE products
-                SET stock = stock - ?
-                WHERE id = ?
-            """, (quantity, product_id))
+            cur.execute("UPDATE products SET stock = stock - ? WHERE id = ?", (quantity, product_id))
 
         cur.execute("DELETE FROM cart WHERE user_id=?", (session['user_id'],))
         conn.commit()
         cur.close()
         conn.close()
 
-        return redirect(url_for('order_success'))
+        if payment == 'transferencia':
+            flash("Pedido registrado como 'Pendiente de pago'", "info")
+            return redirect(url_for('my_orders'))
+        else:
+            return redirect(url_for('order_success'))
 
     cur.close()
     conn.close()
-    return render_template('checkout.html', items=items, total=total)
+
+    return render_template('checkout.html', items=items, total=total, addresses=addresses)
 
 @app.route('/create-checkout-session')
 def create_checkout_session():
@@ -961,6 +1064,7 @@ def seller_orders():
     return render_template('seller_orders.html', sales=sales, total=total)
 
 @app.route('/seller/dashboard')
+@login_required('seller')
 def seller_dashboard():
     if 'user_id' not in session or session.get('role') != 'seller':
         return redirect(url_for('login'))
@@ -1019,10 +1123,7 @@ def seller_dashboard():
         ultimas=ultimas
     )
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
+# ==================== DIRECCIONES ====================
 
 @app.route('/my_addresses')
 def my_addresses():
@@ -1043,6 +1144,7 @@ def my_addresses():
     conn.close()
 
     return render_template('my_addresses.html', addresses=addresses)
+
 
 @app.route('/add_address', methods=['GET', 'POST'])
 def add_address():
@@ -1078,6 +1180,15 @@ def add_address():
         cur.close()
         conn.close()
 
-        return redirect(url_for('my_addresses'))
+        flash("Dirección agregada correctamente", "success")
+        return redirect(url_for('checkout'))
 
     return render_template('add_address.html')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+

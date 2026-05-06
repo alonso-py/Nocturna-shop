@@ -1,12 +1,14 @@
 
 {% extends "base.html" %}
-{% block title %}Productos | Mini Amazon{% endblock %}
+{% block title %}Productos | Nocturna{% endblock %}
 
 {% block content %}
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
-
+<form method="GET" action="/buyer/products" class="header-search">
+    <input type="text" name="q" placeholder="Buscar">
+</form>
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">

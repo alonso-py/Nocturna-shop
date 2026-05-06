@@ -2,7 +2,7 @@
 
 {% extends "base.html" %}
 {% set hide_search = false %}
-{% block title %}Tu carrito | MiniAmazon{% endblock %}
+{% block title %}Tu carrito | Nocturna{% endblock %}
 
 {% block content %}
 
@@ -15,7 +15,7 @@
     </div>
   {% endif %}
 {% endwith %}
-<h2 class="section-title">🛒 Tu carrito</h2>
+<h4 class="section-title">🛒 Tu carrito</h4>
 
 {% if items %}
 
@@ -29,7 +29,13 @@
             <div class="cart-info">
                 <strong>{{ i[1] }}</strong><br>
                 Precio: ${{ i[2] }}<br>
-                Cantidad: {{ i[3] }}
+                <div style="display: flex; align-items: center; border: 1px solid #ccc; border-radius: 6px; width: fit-content;">
+    <a href="/cart/update/{{ i[0] }}/minus" 
+       style="padding: 6px 12px; font-size: 18px; text-decoration: none; color: black;">−</a>
+    <span style="padding: 6px 16px; font-weight: bold;">{{ i[3] }}</span>
+    <a href="/cart/update/{{ i[0] }}/plus" 
+       style="padding: 6px 12px; font-size: 18px; text-decoration: none; color: black;">+</a>
+</div>
             </div>
 
             <div class="cart-price">

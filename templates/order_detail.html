@@ -1,72 +1,62 @@
 {% extends "base.html" %}
 {% set hide_search = true %}
-{% block title %}Pedido #{{ order.id }} | MiniAmazon{% endblock %}
+{% block title %}Pedido #{{ order.id }} | Nocturna{% endblock %}
 
 {% block content %}
 
-<h2 class="section-title">📦 Pedido #{{ order.id }}</h2>
+<div style="max-width: 800px; margin: 30px auto;">
 
-<div class="order-detail-card">
-
-    <div class="order-info">
-        <div>
-            <strong>Fecha</strong><br>
-            {{ order.created_at }}
+    <h1 style="margin-bottom: 10px;">Pedido #{{ order.id }}</h1>
+    
+    <!-- BARRA DE PROGRESO DEL PEDIDO -->
+    <div style="margin: 25px 0 35px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+            <span style="color: #FF9900; font-weight: bold;">Procesando</span>
+            <span style="color: #FF9900; font-weight: bold;">En camino</span>
+            <span style="color: #888;">Entregado</span>
         </div>
-
-        <div>
-            <strong>Dirección</strong><br>
-            {{ order.address }}
-        </div>
-
-        <div>
-            <strong>Método de pago</strong><br>
-            {{ order.payment_method }}
-        </div>
-
-        <div>
-            <strong>Total</strong><br>
-            ${{ order.total }}
+        <div style="height: 10px; background: #ddd; border-radius: 10px; position: relative;">
+            <div style="position: absolute; height: 100%; width: 66%; background: linear-gradient(to right, #FF9900, #f08804); border-radius: 10px;"></div>
         </div>
     </div>
 
-    <!-- ESTADO DEL PEDIDO -->
-    <div class="order-status">
-        <div class="step {% if order.status in ['Procesando','En camino','Entregado'] %}active{% endif %}">
-            🕒 Procesando
-        </div>
-        <div class="step {% if order.status in ['En camino','Entregado'] %}active{% endif %}">
-            🚚 En camino
-        </div>
-        <div class="step {% if order.status == 'Entregado' %}active{% endif %}">
-            📦 Entregado
+    <!-- Información del pedido (tu diseño original) -->
+    <div class="order-detail-card">
+        <div class="order-info">
+            <div>
+                <strong>Fecha</strong><br>
+                {{ order.created_at }}
+            </div>
+            <div>
+                <strong>Dirección</strong><br>
+                {{ order.address }}
+            </div>
+            <div>
+                <strong>Método de pago</strong><br>
+                {{ order.payment_method }}
+            </div>
+            <div>
+                <strong>Total</strong><br>
+                <span style="color:#B12704; font-weight:bold;">${{ order.total }}</span>
+            </div>
         </div>
     </div>
+
+    <!-- Productos del pedido -->
+    <h3 style="margin: 30px 0 15px;">🛍 Productos</h3>
+    <div class="order-products">
+        {% for item in items %}
+        <div class="product-row">
+            <span>{{ item.name }} × {{ item.quantity }}</span>
+            <span class="subtotal">${{ item.price * item.quantity }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <a href="{{ url_for('my_orders') }}" style="display:inline-block; margin-top:20px; color:#007185; text-decoration:none;">
+        ← Volver a mis pedidos
+    </a>
 
 </div>
-
-<h3 class="section-title">🛍 Productos</h3>
-
-<div class="order-products">
-
-    {% for item in items %}
-    <div class="product-row">
-        <div>
-            <strong>{{ item.name }}</strong><br>
-            Cantidad: {{ item.quantity }}
-        </div>
-
-        <div>
-            ${{ item.price }}<br>
-            <span class="subtotal">
-                Subtotal: ${{ item.quantity * item.price }}
-            </span>
-        </div>
-    </div>
-    {% endfor %}
-
-</div>
-
-<a href="{{ url_for('my_orders') }}" class="btn-outline">← Volver a mis pedidos</a>
 
 {% endblock %}

@@ -11,10 +11,16 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
+app.py.bak 
+app.py.bak2
+aplicación.py.bak
+aplicación.py.bak2
 
 # Base de datos
 database.db
 *.db
+*.sqlite3
+database_backup.db
 
 # Archivos de logs
 *.log
@@ -26,3 +32,4 @@ Thumbs.db
 # Carpetas de editores
 .vscode/
 .idea/
+

@@ -1,7 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Confirmar compra | MiniAmazon{% endblock %}
+{% block title %}Confirmar compra | Nocturna{% endblock %}
 
 {% block content %}
+<div style="max-width: 900px; margin: 30px auto; padding: 0 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; color: #555;">
+        <span style="color: #FF9900; font-weight: bold;">1. Carrito</span>
+        <span style="color: #FF9900; font-weight: bold;">2. Confirmar compra</span>
+        <span>3. Pago</span>
+    </div>
+    <div style="height: 8px; background: #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="width: 66%; height: 100%; background: #FF9900; border-radius: 10px;"></div>
+    </div>
+</div>
 
 <div class="checkout-container">
 
@@ -10,27 +20,49 @@
 
         <h2>📦 Confirmar compra</h2>
 
-        <!-- 🔥 DIRECCIÓN (solo visual por ahora) -->
+        <!-- DIRECCIÓN DE ENVÍO -->
         <div class="checkout-box">
             <h3>Dirección de envío</h3>
-            <textarea name="address"
-                    placeholder="Ingresa tu dirección completa"></textarea>
-            <small>(Se habilitará en siguiente versión)</small>
+
+            {% if addresses %}
+            <select name="address_id" class="w-full p-3 border rounded-lg mb-4">
+                {% for addr in addresses %}
+                <option value="{{ addr[0] }}">
+                    {{ addr[1] }} - {{ addr[2] }}, {{ addr[3] }}, {{ addr[4] }} CP {{ addr[5] }}
+                </option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <p style="color:#666; margin-bottom:10px;">No tienes direcciones guardadas.</p>
+            {% endif %}
+
+            <a href="{{ url_for('add_address') }}" 
+            style="color:#FF9900; text-decoration:underline; font-size:14px;">
+                + Agregar nueva dirección
+            </a>
         </div>
 
-        <!-- 🔥 MÉTODO DE PAGO -->
+
+ <!-- 🔥 MÉTODO DE PAGO -->
         <div class="checkout-box">
             <h3>Método de pago</h3>
 
-            <!-- ✅ BOTÓN STRIPE -->
-            <a href="/create-checkout-session" class="btn-primary">
-                💳 Pagar con tarjeta
+            <!-- Opción Stripe (ya la tenías) -->
+            <a href="/create-checkout-session" class="btn-primary" style="display:block; margin-bottom:15px;">
+                💳 Pagar con tarjeta (Stripe)
             </a>
 
-            <!-- OPCIONAL -->
-            <p style="margin-top:10px; font-size:14px; color:gray;">
-                Serás redirigido a una plataforma segura (Stripe)
-            </p>
+            <!-- Nueva opción: Transferencia -->
+            <div onclick="seleccionarTransferencia()" 
+                style="border: 2px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                onmouseover="this.style.borderColor='#FF9900'" 
+                onmouseout="this.style.borderColor='#ddd'">
+                🏦 Pagar con transferencia bancaria
+                <small style="display:block; color:#666; margin-top:5px;">
+                    El pedido quedará en estado "Pendiente de pago" hasta confirmar el depósito.
+                </small>
+            </div>
+
         </div>
 
     </div>
@@ -62,5 +94,25 @@
     </div>
 
 </div>
+
+<script>
+function seleccionarTransferencia() {
+    if (confirm("¿Confirmar pago con transferencia bancaria?\n\nEl pedido se registrará como 'Pendiente de pago'.\n\nDatos para transferir:\nBanco: BBVA\nCLABE: 012180000123456789\nReferencia: Pedido #XXXX\n\nUna vez hecha la transferencia, sube el comprobante.")) {
+        // Enviar el formulario con payment = transferencia
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/checkout';
+        
+        const paymentInput = document.createElement('input');
+        paymentInput.type = 'hidden';
+        paymentInput.name = 'payment';
+        paymentInput.value = 'transferencia';
+        form.appendChild(paymentInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 
 {% endblock %}

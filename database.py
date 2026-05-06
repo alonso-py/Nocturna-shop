@@ -71,7 +71,19 @@ def init_db():
         FOREIGN KEY(product_id) REFERENCES products(id)
     )
     """)
-    
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS addresses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    full_name TEXT,
+    street TEXT,
+    city TEXT,
+    state TEXT,
+    postal_code TEXT,
+    phone TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+    """)
     
 
     conn.commit()

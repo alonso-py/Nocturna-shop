@@ -1,75 +1,92 @@
 {% extends "base.html" %}
-
-{% block title %}{{ product.name }} | MiniAmazon{% endblock %}
+{% block title %}{{ product.name }} | Nocturna{% endblock %}
 
 {% block content %}
 
-<div class="breadcrumb">
-    <a href="{{ url_for('buyer_products') }}">Inicio</a> ›
-    <span>{{ product.name }}</span>
-</div>
+<div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
 
+    <a href="{{ url_for('buyer_products') }}" style="color: #007185; text-decoration: none; margin-bottom: 20px; display: inline-block;">
+        ← Volver a todos los productos
+    </a>
 
-<div class="product-page">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
 
-    <!-- IMAGEN -->
-    <div class="product-image">
-        {% if product.image %}
-            <img src="/static/uploads/{{ product.image }}">
-        {% else %}
-            <div class="no-image">Sin imagen</div>
-        {% endif %}
+        <!-- Imagen grande -->
+        <div>
+            {% if product.image %}
+                <img src="{{ url_for('static', filename='uploads/' + product.image) }}" 
+                     style="width: 100%; max-height: 520px; object-fit: contain; border-radius: 12px;" 
+                     alt="{{ product.name }}">
+            {% else %}
+                <div style="height: 500px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 100px;">
+                    📦
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Información del producto -->
+        <div>
+            <h4 style="font-size: 28px; line-height: 1.3; margin-bottom: 12px;">{{ product.name }}</h4>
+
+            <!-- Calificaciones (simuladas) -->
+            <div style="margin-bottom: 20px;">
+                <span style="color: #f0c14b; font-size: 22px;">★★★★☆</span>
+                <span style="margin-left: 10px; color: #007185;">128 calificaciones</span>
+            </div>
+
+            <p style="font-size: 32px; font-weight: bold; color: #B12704; margin: 15px 0;">
+                ${{ product.price }}
+            </p>
+
+            <!-- Stock -->
+            <p style="color: #007600; font-weight: bold; margin: 15px 0;">
+                ✅ En stock
+            </p>
+
+            <!-- Descripción -->
+            <div style="margin: 25px 0; line-height: 1.7; color: #333;">
+                {{ product.description or "Este producto no tiene descripción detallada aún." }}
+            </div>
+
+            <!-- Botón agregar -->
+            <div style="margin-top: 35px;">
+                <a href="{{ url_for('add_to_cart', product_id=product.id) }}" 
+                   style="display: block; background: #FF9900; color: black; text-align: center; padding: 16px; border-radius: 10px; font-weight: bold; font-size: 18px; text-decoration: none;">
+                    🛒 Agregar al carrito
+                </a>
+            </div>
+        </div>
     </div>
 
-    <!-- INFO -->
-    <div class="product-info">
-        <h1 class="product-title">{{ product.name }}</h1>
-<div class="rating">
-    ⭐⭐⭐⭐☆ <span>(128 calificaciones)</span>
-</div>
-
-<p class="stock">Disponible</p>
-
-        <p class="price">$ {{ product.price }}</p>
-
-        <p class="product-desc">
-            {{ product.description }}
-        </p>
+    <!-- Productos relacionados -->
+    {% if related %}
+    <div style="margin-top: 60px;">
+        <h2 style="font-size: 24px; margin-bottom: 20px;">Productos relacionados</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
+            {% for r in related %}
+            <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 3px 12px rgba(0,0,0,0.08);">
+                <div style="height: 180px; background: #f8f8f8; display: flex; align-items: center; justify-content: center; padding: 10px;">
+                    {% if r.image %}
+                        <img src="{{ url_for('static', filename='uploads/' + r.image) }}" 
+                             style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                    {% else %}
+                        <span style="font-size: 50px; color: #ddd;">📦</span>
+                    {% endif %}
+                </div>
+                <div style="padding: 15px;">
+                    <h4 style="font-size: 16px; margin-bottom: 8px; height: 48px; line-clamp: 2;">{{ r.name }}</h4>
+                    <p style="font-weight: bold; color: #B12704; font-size: 18px;">${{ r.price }}</p>
+                    <a href="{{ url_for('buyer_product_detail', product_id=r.id) }}" 
+                       style="display: block; margin-top: 12px; text-align: center; padding: 10px; background: #f0f0f0; border-radius: 8px; font-size: 14px;">
+                        Ver más
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
+    {% endif %}
 
-    <!-- CAJA DE COMPRA -->
-    <div class="buy-box">
-        <p class="price-buy">$ {{ product.price }}</p>
-
-        {% if session.get('user_id') %}
-        <a href="/add_to_cart/{{ product.id }}" class="btn-buy">
-        🛒 Agregar al carrito
-        </a>
-        {% else %}
-        <a href="{{ url_for('login', next=request.url) }}" class="btn-buy">
-        🔒 Inicia sesión para comprar
-        </a>
-        {% endif %}
-<p class="delivery">
-    📦 Llega entre <strong>mañana</strong> y <strong>3 días hábiles</strong>
-</p>
-
-        <p class="secure">🔒 Compra segura</p>
-    </div>
-
-</div>
-
-<h2 class="related-title">Productos relacionados</h2>
-
-<div class="related-products">
-    {% for r in related_products %}
-    <div class="related-card">
-        <img src="/static/uploads/{{ r.image or 'no-image.jpg' }}">
-        <p>{{ r.name }}</p>
-        <span>${{ r.price }}</span>
-    </div>
-    {% endfor %}
 </div>
 
 {% endblock %}
-
